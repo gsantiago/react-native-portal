@@ -1,5 +1,5 @@
 /*
-  @flow weak
+   weak
  */
 
 import React from 'react'; // peer-dependency
@@ -12,21 +12,37 @@ const oContextTypes = {
   portalSub: PropTypes.func,
   portalUnsub: PropTypes.func,
   portalSet: PropTypes.func,
-  portalGet: PropTypes.func,
+  portalGet: PropTypes.func
 };
 
 export class PortalProvider extends React.Component {
-  _emitter: *;
-  static childContextTypes = oContextTypes;
+  constructor(...args) {
+    var _temp;
 
-  portals = new Map();
+    return _temp = super(...args), this.portals = new Map(), this.portalSub = (name, callback) => {
+      const emitter = this._emitter;
+      if (emitter) {
+        emitter.on(name, callback);
+      }
+    }, this.portalUnsub = (name, callback) => {
+      const emitter = this._emitter;
+      if (emitter) {
+        emitter.off(name, callback);
+      }
+    }, this.portalSet = (name, value) => {
+      this.portals.set(name, value);
+      if (this._emitter) {
+        this._emitter.emit(name);
+      }
+    }, this.portalGet = name => this.portals.get(name) || null, _temp;
+  }
 
   getChildContext() {
     return {
       portalSub: this.portalSub,
       portalUnsub: this.portalUnsub,
       portalSet: this.portalSet,
-      portalGet: this.portalGet,
+      portalGet: this.portalGet
     };
   }
 
@@ -39,30 +55,13 @@ export class PortalProvider extends React.Component {
   }
 
   // 변경시 통지 요청 등록
-  portalSub = (name, callback) => {
-    const emitter = this._emitter;
-    if (emitter) {
-      emitter.on(name, callback);
-    }
-  };
+
 
   // 변경시 통지 요청 해제
-  portalUnsub = (name, callback) => {
-    const emitter = this._emitter;
-    if (emitter) {
-      emitter.off(name, callback);
-    }
-  };
+
 
   // 변경
-  portalSet = (name, value) => {
-    this.portals.set(name, value);
-    if (this._emitter) {
-      this._emitter.emit(name);
-    }
-  };
 
-  portalGet = name => this.portals.get(name) || null;
 
   // 변경
   render() {
@@ -70,12 +69,8 @@ export class PortalProvider extends React.Component {
   }
 }
 
+PortalProvider.childContextTypes = oContextTypes;
 export class BlackPortal extends React.PureComponent {
-  static contextTypes = oContextTypes;
-  props: {
-    name: string,
-    children?: *,
-  };
   componentDidMount() {
     const { name, children } = this.props;
     const { portalSet } = this.context;
@@ -100,13 +95,14 @@ export class BlackPortal extends React.PureComponent {
   }
 }
 
+BlackPortal.contextTypes = oContextTypes;
 export class WhitePortal extends React.PureComponent {
-  static contextTypes = oContextTypes;
-  props: {
-    name: string,
-    children?: *,
-    childrenProps?: *,
-  };
+  constructor(...args) {
+    var _temp2;
+
+    return _temp2 = super(...args), this.forceUpdater = () => this.forceUpdate(), _temp2;
+  }
+
   UNSAGE_componentWillMount() {
     const { name } = this.props;
     const { portalSub } = this.context;
@@ -117,16 +113,13 @@ export class WhitePortal extends React.PureComponent {
     const { portalUnsub } = this.context;
     portalUnsub && portalUnsub(name, this.forceUpdater);
   }
-  forceUpdater = () => this.forceUpdate();
+
 
   render() {
     const { name, children, childrenProps } = this.props;
     const { portalGet } = this.context;
-    const portalChildren = (portalGet && portalGet(name)) || children;
-    return (
-      (childrenProps && portalChildren
-        ? React.cloneElement(React.Children.only(portalChildren), childrenProps)
-        : portalChildren) || null
-    );
+    const portalChildren = portalGet && portalGet(name) || children;
+    return (childrenProps && portalChildren ? React.cloneElement(React.Children.only(portalChildren), childrenProps) : portalChildren) || null;
   }
 }
+WhitePortal.contextTypes = oContextTypes;
